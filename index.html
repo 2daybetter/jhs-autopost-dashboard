@@ -1,0 +1,963 @@
+<!doctype html>
+<html lang="ko" data-theme="auto">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>JHS 승인 · Approval</title>
+<style>
+/* ─── Adeo FO Design System: Pretendard / #3479FF / radius 0 ─────────────── */
+:root{
+  --ink:#0D1117; --ink-2:#3A4453; --ink-3:#6B7789;
+  --paper:#F4F6F8; --surface:#FFFFFF; --surface-2:#EAEDF2;
+  --line:#D6DCE4; --accent:#3479FF; --accent-ink:#1E4FB0; --accent-soft:#E5EDFF;
+  --ok:#17724A; --ok-bg:#E1F2EA; --crit:#B93328; --crit-bg:#FBE7E4;
+  --amber:#B4700F; --amber-bg:#FAF0DB;
+}
+@media (prefers-color-scheme:dark){
+  :root{ --ink:#E7ECF3; --ink-2:#A6B1C0; --ink-3:#778393;
+    --paper:#0A0E14; --surface:#12181F; --surface-2:#1A222C; --line:#28323F;
+    --accent:#6098FF; --accent-ink:#9DBEFF; --accent-soft:#16243C;
+    --ok:#45B380; --ok-bg:#14261E; --crit:#E47266; --crit-bg:#2B1715;
+    --amber:#DDA24E; --amber-bg:#2A2114; }
+}
+*{box-sizing:border-box}
+body{margin:0;background:var(--paper);color:var(--ink);
+  font:15px/1.65 "Pretendard Variable",Pretendard,-apple-system,"Apple SD Gothic Neo",system-ui,sans-serif;
+  -webkit-font-smoothing:antialiased}
+header{position:sticky;top:0;z-index:10;background:var(--paper);border-bottom:1px solid var(--line);
+  padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;row-gap:8px}
+header b{font-size:15px;letter-spacing:-.02em;white-space:nowrap}
+/* PC(발행·생성 서버) 연결 표시 — 웹 주소로 열었을 때만 보입니다 */
+.pc{font:11px/1.5 ui-monospace,monospace;padding:3px 8px;white-space:nowrap;border:1px solid currentColor}
+.pc.on{color:var(--ok)} .pc.off{color:var(--amber)}
+header .sp{margin-left:auto;font:12px/1.4 ui-monospace,monospace;color:var(--ink-3);font-variant-numeric:tabular-nums}
+main{padding:16px;max-width:1480px;margin:0 auto}
+/* 승인대기 카드 — 한 줄 3건(화면 폭에 따라 2건·1건으로 자동 축소) */
+.cards{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:18px;align-items:start}
+.cards .card{margin-bottom:0}
+@media (max-width:1279px){ .cards{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:819px){ .cards{grid-template-columns:1fr} }
+.card{background:var(--surface);border:1px solid var(--line);margin-bottom:18px}
+.card > .h{padding:13px 16px;border-bottom:1px solid var(--line);background:var(--surface-2);
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tag{font:11px/1.4 ui-monospace,monospace;letter-spacing:.06em;border:1px solid currentColor;padding:2px 7px;color:var(--accent-ink)}
+.date{font:12px/1.4 ui-monospace,monospace;color:var(--ink-3);margin-left:auto}
+.media{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:1px;background:var(--line)}
+.media > *{background:var(--surface);width:100%;display:block;aspect-ratio:4/5;object-fit:cover}
+.media video{aspect-ratio:9/16;background:#000}
+.body{padding:16px;display:grid;gap:14px}
+.lbl{font:10px/1.4 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.sb{display:grid;gap:8px}
+.sb .row{display:grid;grid-template-columns:44px 1fr;gap:10px;font-size:13px}
+.sb .n{font:11px/1.6 ui-monospace,monospace;color:var(--accent)}
+.sb .t{color:var(--ink-2)}
+textarea{width:100%;min-height:110px;font:13px/1.7 inherit;color:var(--ink);
+  background:var(--surface-2);border:1px solid var(--line);padding:11px;resize:vertical;border-radius:0}
+textarea:focus{outline:2px solid var(--accent);outline-offset:-1px}
+select{width:100%;font:13px/1.6 inherit;color:var(--ink);background:var(--surface-2);
+  border:1px solid var(--line);border-radius:0;padding:9px 10px}
+select:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.music{display:grid;gap:8px}
+.music audio{width:100%;height:34px}
+.music .remux{width:100%;padding:9px;font-size:12px}
+.music .note{font:11px/1.6 inherit;color:var(--ink-3)}
+/* 발행 옵션 체크박스 — 어떤 형태로 올릴지 카드마다 따로 고릅니다 */
+.opts{display:grid;gap:8px;padding:11px 12px;border:1px solid var(--line);border-radius:6px}
+.opts label{display:grid;grid-template-columns:auto 1fr;gap:9px;align-items:start;cursor:pointer;font-size:13px}
+.opts input{margin:2px 0 0;width:15px;height:15px;accent-color:var(--go,#2f6feb);cursor:pointer}
+.opts .sub{display:block;margin-top:2px;font:11px/1.6 inherit;color:var(--ink-3)}
+.tags{display:flex;flex-wrap:wrap;gap:5px}
+.tags span{font:11px/1.5 ui-monospace,monospace;color:var(--ink-3);background:var(--surface-2);padding:2px 7px}
+.acts{display:grid;grid-template-columns:2fr 1fr;gap:1px;background:var(--line);border-top:1px solid var(--line)}
+button{font:600 14px/1.3 inherit;border:0;padding:15px 12px;cursor:pointer;color:#fff}
+button:disabled{opacity:.45;cursor:not-allowed}
+.publish{background:var(--accent)} .reject{background:var(--crit)}
+.publish small,.reject small{display:block;font-weight:400;font-size:11px;opacity:.85;margin-top:3px}
+.ghost{background:var(--surface);color:var(--ink-2);border:1px solid var(--line);padding:10px 14px;font-weight:500}
+.empty{text-align:center;padding:60px 20px;color:var(--ink-3)}
+.login{max-width:380px;margin:60px auto;padding:24px;background:var(--surface);border:1px solid var(--line);display:grid;gap:12px}
+input[type=email],input[type=password],input[type=text]{width:100%;font:14px inherit;padding:11px;border:1px solid var(--line);background:var(--surface-2);color:var(--ink);border-radius:0}
+input[type=text]:focus{outline:2px solid var(--accent);outline-offset:-1px}
+.savebar{padding:0 16px 16px}
+.savebar button{width:100%;padding:11px}
+.primary{background:var(--accent)}
+#genBtn{background:var(--accent);color:#fff;border-color:var(--accent)}
+.st.fail{background:var(--crit-bg);color:var(--crit);font:11px/1.4 ui-monospace,monospace;padding:2px 7px}
+.tabs{display:flex;gap:1px;background:var(--line);border:1px solid var(--line)}
+.tabs button{background:var(--surface);color:var(--ink-2);font-size:12.5px;padding:8px 11px;white-space:nowrap}
+.tabs button.on{background:var(--accent);color:#fff}
+.hist{border:1px solid var(--line);background:var(--surface);max-width:820px;margin:0 auto}
+.hrow{display:grid;grid-template-columns:90px 60px 1fr 100px;gap:10px;align-items:center;
+  padding:10px 14px;border-bottom:1px solid var(--line);font-size:12.5px}
+.hrow:last-child{border-bottom:0}
+.hrow .d{font:11.5px/1.4 ui-monospace,monospace;color:var(--ink-3)}
+.hrow .st{font:10.5px/1.5 ui-monospace,monospace;padding:2px 6px;white-space:nowrap;justify-self:start}
+.st.rej{background:var(--crit-bg);color:var(--crit)} .st.plan{background:var(--surface-2);color:var(--ink-3)}
+.hrow .cap{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.hrow .who{color:var(--ink-3);font-size:11px;text-align:right}
+@media (max-width:620px){ .hrow{grid-template-columns:1fr;gap:3px} .hrow .who{text-align:left} }
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:var(--ink);color:var(--paper);
+  padding:11px 18px;font-size:13px;z-index:50;max-width:90vw;text-align:center}
+/* 좌측 액센트 띠는 쓰지 않습니다(전 산출물 공통) — 배경·글자색으로만 구분합니다. */
+.warn{background:var(--crit-bg);color:var(--crit);padding:9px 12px;font-size:12.5px}
+.note{background:var(--amber-bg);color:var(--amber);padding:9px 12px;font-size:12.5px;line-height:1.6}
+
+/* ── 성과 · 블로그 패널 ─────────────────────────────────────────────────── */
+.panel{border:1px solid var(--line);background:var(--surface);max-width:820px;margin:0 auto 18px}
+.panel > .th{padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);
+  display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.panel > .th b{font-size:13px}
+.panel > .th .when{margin-left:auto;font:11.5px/1.5 ui-monospace,monospace;color:var(--ink-3)}
+.panel > .th button{padding:7px 11px;font-size:12px;background:var(--accent)}
+.kpis{display:grid;grid-template-columns:repeat(4,1fr);gap:1px;background:var(--line)}
+.kpi{background:var(--surface);padding:12px 14px}
+.kpi b{display:block;font:600 19px/1.2 Inter,inherit;font-variant-numeric:tabular-nums}
+.kpi small{display:block;margin-top:3px;font-size:11px;color:var(--ink-3)}
+.mrow{display:grid;grid-template-columns:62px 40px 1fr 168px;gap:10px;align-items:center;
+  padding:10px 14px;border-bottom:1px solid var(--line);font-size:12.5px}
+.mrow:last-child{border-bottom:0}
+.mrow .d{font:11.5px/1.4 ui-monospace,monospace;color:var(--ink-3)}
+.mrow .st{justify-self:start}
+.mrow .cap{color:var(--ink-2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.mrow .n{font:11.5px/1.5 ui-monospace,monospace;color:var(--ink-2);font-variant-numeric:tabular-nums;text-align:right}
+.mrow .n a{color:var(--accent-ink)}
+.blogform{display:grid;grid-template-columns:1fr auto;gap:9px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.blogform button{padding:11px 16px;font-size:13px;background:var(--accent);white-space:nowrap}
+.brow{display:grid;grid-template-columns:62px 1fr auto;gap:10px;align-items:center;
+  padding:12px 14px;border-bottom:1px solid var(--line);font-size:13px;cursor:pointer;text-align:left;
+  width:100%;background:var(--surface);color:var(--ink);font-weight:400}
+.brow:last-child{border-bottom:0}
+.brow:hover{background:var(--surface-2)}
+.brow .t{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.brow .meta{font:11px/1.5 ui-monospace,monospace;color:var(--ink-3);white-space:nowrap}
+.todo{font:10.5px/1.5 ui-monospace,monospace;background:var(--amber-bg);color:var(--amber);padding:2px 7px}
+.bdetail{padding:14px;display:grid;gap:11px}
+/* 본문은 2,000자 안팎의 한글이라 고정폭 글꼴이면 읽기 어렵습니다 —
+   font 축약형에 inherit 을 쓰면 선언 자체가 무시되므로 개별 속성으로 적습니다. */
+.bdetail textarea{min-height:460px;font-family:inherit;font-size:14px;line-height:1.85}
+.bdetail .lbl{margin-bottom:5px}
+.bacts{display:flex;gap:8px;flex-wrap:wrap}
+.bacts button{flex:1 1 140px;padding:12px 14px;font-size:13px;background:var(--accent)}
+.bacts button.ghost{background:var(--surface);color:var(--ink-2)}
+
+/* ── 발행 진행 트레이 ──────────────────────────────────────────────────── */
+.tray{border:1px solid var(--line);background:var(--surface);margin:0 auto 18px;max-width:820px}
+.tray > .th{padding:10px 14px;border-bottom:1px solid var(--line);background:var(--surface-2);
+  display:flex;align-items:center;gap:9px}
+.tray > .th span{font:10px/1.4 ui-monospace,monospace;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-3)}
+.tray > .th .live{width:7px;height:7px;background:var(--accent);border-radius:50%;animation:pulse 1.6s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.25}}
+.trow{display:flex;gap:10px;align-items:center;padding:11px 14px;border-bottom:1px solid var(--line);font-size:13px;flex-wrap:wrap}
+.trow:last-child{border-bottom:0}
+.trow .st{font:11px/1.5 ui-monospace,monospace;padding:2px 8px;white-space:nowrap}
+.st.wait{background:var(--amber-bg);color:var(--amber)}
+.st.go{background:var(--accent-soft);color:var(--accent-ink)}
+.st.done{background:var(--ok-bg);color:var(--ok)}
+.st.err{background:var(--crit-bg);color:var(--crit)}
+.trow .when{margin-left:auto;font:11.5px/1.5 ui-monospace,monospace;color:var(--ink-3)}
+@media (max-width:520px){ .acts{grid-template-columns:1fr} }
+
+/* ── 휴대폰 (2026-09-23 이사님 지시 — 모바일에서 확인·발행 가능하게) ──────────
+   같은 와이파이에서 http://<PC 아이피>:4321 로 접속합니다.
+   좁은 화면에서 실제로 걸리던 세 가지를 잡습니다.
+     1) 미디어가 화면 두 개 분량을 차지해 본문까지 한참 내려야 했던 문제
+     2) iOS 사파리가 16px 미만 입력칸에 초점이 가면 화면을 확대해 버리는 문제
+     3) 상단 고정 머리말이 두 줄로 불어나 화면을 잡아먹던 문제                  */
+/* iOS·안드로이드는 16px 미만 입력칸에 초점이 가면 화면을 확대해 버립니다 —
+   화면 크기가 아니라 "손가락으로 쓰는 기기" 기준으로 막습니다(태블릿 포함). */
+@media (pointer:coarse){
+  textarea,select,input[type=email],input[type=password],input[type=text]{font-size:16px}
+  .opts input{width:20px;height:20px;margin-top:0}
+}
+@media (max-width:620px){
+  /* 영상은 한 줄 전체로 크게, 키프레임은 아래 띠로 — 높이를 화면 안에 가둡니다.
+     장수가 몇 장이든 남는 칸 없이 폭을 채우도록 격자 대신 flex 로 깝니다. */
+  .media{display:flex;flex-wrap:wrap}
+  .media video{width:100%;aspect-ratio:auto;height:min(56vh,380px);object-fit:contain}
+  .media img{flex:1 1 90px;min-width:0;aspect-ratio:1/1}
+  /* 영상이 있는 카드에서 이미지는 참고용 키프레임이므로 작은 띠로 줄입니다.
+     이미지만 있는 카드(카드뉴스·문장카드)는 이미지가 본체라 크게 둡니다. */
+  .media:has(video) img{aspect-ratio:auto;height:104px;object-fit:cover}
+  textarea{min-height:96px}
+  /* 머리말 — 제목/잔액 한 줄, 탭 한 줄, 동작 버튼 한 줄로 낮게 */
+  header{padding:9px 12px;gap:7px;row-gap:7px}
+  header b{font-size:14px}
+  header .sp{font-size:11.5px}
+  .tabs{order:3;width:100%}
+  .tabs button{flex:1;padding:10px 4px;font-size:13px}
+  header .ghost{order:4;flex:1;padding:10px 8px;font-size:12.5px}
+  main{padding:12px}
+  .cards{gap:12px}
+  .body{padding:13px;gap:12px}
+  /* 성과·블로그 — 네 칸 격자는 좁은 화면에서 숫자가 겹쳐 두 칸으로 접습니다. */
+  .kpis{grid-template-columns:repeat(2,1fr)}
+  .mrow{grid-template-columns:1fr;gap:3px}
+  .mrow .n{text-align:left}
+  .blogform{grid-template-columns:1fr}
+  .brow{grid-template-columns:1fr;gap:4px}
+}
+</style>
+</head>
+<body>
+<header><b>JHS 승인</b>
+  <nav class="tabs" id="tabsNav" hidden>
+    <button data-tab="pending">승인대기</button>
+    <button data-tab="tray">발행현황</button>
+    <button data-tab="history">히스토리</button>
+    <button data-tab="metrics">성과</button>
+    <button data-tab="blog">블로그</button>
+  </nav>
+  <span class="pc" id="pc" hidden></span>
+  <span class="sp" id="spend">—</span>
+  <button class="ghost" id="genBtn" hidden>콘텐츠 10건 생성</button>
+  <button class="ghost" id="out" hidden>로그아웃</button></header>
+<main id="app"><div class="empty">불러오는 중…</div></main>
+
+<script type="module">
+// ═══════════════════════════════════════════════════════════════════════════
+// 설정 — 아래 두 값을 본인 프로젝트 값으로 교체하십시오.
+// anon 키는 공개되어도 안전합니다(RLS 로 보호). service_role 키는 절대 넣지 마십시오.
+// ═══════════════════════════════════════════════════════════════════════════
+const SUPABASE_URL = 'https://vrlxqsowbuypsgpwxtlz.supabase.co';
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZybHhxc293YnV5cHNncHd4dGx6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3OTA4MTU5MzcsImV4cCI6MjEwNjM5MTkzN30.kIk8Ep5A040Uzrxl_JZMqQ9gqvHrXIT4SHhHgitN9K0';
+
+import { createClient } from 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/+esm';
+// 블로그 본문을 네이버용 HTML 로 바꾸는 규칙은 초안 생성 스크립트와 같은 파일을 씁니다.
+import { toNaverHtml } from './naver-html.js';
+const sb = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+const app = document.getElementById('app');
+const esc = (s) => String(s ?? '').replace(/[&<>"]/g, (c) => ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;' }[c]));
+
+function toast(msg) {
+  const t = document.createElement('div');
+  t.className = 'toast'; t.textContent = msg; document.body.appendChild(t);
+  setTimeout(() => t.remove(), 3200);
+}
+
+/* ── 시각 표시 (KST) ─────────────────────────────────────────────────────── */
+function fmtKst(iso) {
+  if (!iso) return '-';
+  const d = new Date(new Date(iso).getTime() + 9 * 3600 * 1000);
+  const p = (n) => String(n).padStart(2, '0');
+  return `${p(d.getUTCMonth() + 1)}-${p(d.getUTCDate())} ${p(d.getUTCHours())}:${p(d.getUTCMinutes())}`;
+}
+
+/* ── 로그인 (어드민 이메일/비밀번호) ────────────────────────────────────── */
+function renderLogin() {
+  stopPoll();
+  document.getElementById('out').hidden = true;
+  document.getElementById('genBtn').hidden = true;
+  document.getElementById('tabsNav').hidden = true;
+  document.getElementById('pc').hidden = true;
+  app.innerHTML = `<form class="login" id="lf">
+    <div><span class="lbl">승인 대시보드</span>
+    <p style="margin:6px 0 0;font-size:13px;color:var(--ink-2)">관리자 계정으로 로그인하십시오.</p></div>
+    <input type="email" id="em" placeholder="admin@example.com" required autocomplete="username">
+    <input type="password" id="pw" placeholder="비밀번호" required autocomplete="current-password">
+    <button type="submit" class="primary">로그인</button></form>`;
+  document.getElementById('lf').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = document.getElementById('em').value.trim();
+    const password = document.getElementById('pw').value;
+    const { error } = await sb.auth.signInWithPassword({ email, password });
+    if (error) toast(`오류: ${error.message}`);
+  });
+}
+
+/* ── 탭 전환 (헤더에 고정 — 승인대기 / 발행현황 / 히스토리 3개를 한 줄에 표시) ── */
+let currentTab = 'pending';
+function updateTabsNav() {
+  document.querySelectorAll('#tabsNav [data-tab]')
+    .forEach((b) => b.classList.toggle('on', b.dataset.tab === currentTab));
+}
+document.querySelectorAll('#tabsNav [data-tab]').forEach((b) => b.addEventListener('click', onTab));
+
+function renderApp() {
+  document.getElementById('out').hidden = false;
+  document.getElementById('genBtn').hidden = false;
+  document.getElementById('tabsNav').hidden = false;
+  updateTabsNav();
+  refreshSpend();
+  refreshPcState();   // 웹에서 열었을 때 PC 가 켜져 있는지 표시합니다.
+  if (currentTab === 'history') return renderHistory();
+  if (currentTab === 'metrics') return renderMetrics();
+  if (currentTab === 'blog') return renderBlog();
+  return renderQueueOrTray();
+}
+
+async function refreshSpend() {
+  const { data } = await sb.from('assets').select('cost_usd').gte('created_at', monthStart());
+  const usd = (data ?? []).reduce((s, r) => s + Number(r.cost_usd), 0);
+  document.getElementById('spend').textContent =
+    `당월 $${usd.toFixed(2)} · 약 ${Math.round(usd * 1390).toLocaleString('ko-KR')}원`;
+}
+
+/* ── 발행·생성을 실행할 PC 를 찾습니다 ─────────────────────────────────────
+   이 페이지는 두 곳에서 열립니다.
+     · 집/사무실 안 (localhost·192.168.x) — 바로 옆 포트 4322 를 부릅니다.
+     · 웹 주소 (Vercel) — PC 는 인터넷 반대편에 있으므로 터널 주소가 필요합니다.
+   터널 주소는 껐다 켤 때마다 바뀌어서 페이지에 적어 둘 수 없습니다. 대신 PC 가
+   켜질 때 현재 주소를 공개 버킷의 config/trigger.json 에 써 두고(scripts/run-tunnel.mjs),
+   이 페이지가 누를 때마다 그 파일을 읽어 현재 주소를 따라갑니다.
+   파일이 없으면 = PC 가 꺼져 있음 → 발행·생성만 잠그고 열람·승인은 그대로 됩니다. */
+const PRIVATE_HOST = /^(localhost|127\.|\[?::1\]?$|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/;
+const IS_LOCAL = PRIVATE_HOST.test(location.hostname);
+const TRIGGER_CONFIG_URL = `${SUPABASE_URL}/storage/v1/object/public/jhs-public/config/trigger.json`;
+const PC_OFFLINE_MSG = 'PC 가 꺼져 있어 발행·생성을 할 수 없습니다 — PC 를 켠 뒤 다시 시도하십시오.';
+
+/** 지금 호출할 트리거 서버 주소. 웹에서 열었으면 PC 의 현재 터널 주소를 찾아옵니다. */
+async function triggerBase() {
+  if (IS_LOCAL) return `${location.protocol}//${location.hostname}:4322/api`;
+  // 주소가 바뀌어도 따라가야 하므로 캐시를 쓰지 않고 매번 읽습니다.
+  const res = await fetch(`${TRIGGER_CONFIG_URL}?t=${Date.now()}`, { cache: 'no-store' });
+  if (!res.ok) throw new Error(PC_OFFLINE_MSG);
+  const { url } = await res.json().catch(() => ({}));
+  if (!url) throw new Error(PC_OFFLINE_MSG);
+  return `${url}/api`;
+}
+
+/** 머리말의 PC 연결 표시를 갱신하고, 꺼져 있으면 생성 버튼을 잠급니다. */
+async function refreshPcState() {
+  const el = document.getElementById('pc');
+  const gen = document.getElementById('genBtn');
+  if (IS_LOCAL) { el.hidden = true; return true; }
+  let on = false;
+  try { await triggerBase(); on = true; } catch { on = false; }
+  el.hidden = false;
+  el.textContent = on ? 'PC 연결됨' : 'PC 꺼짐 · 열람/승인만';
+  el.className = `pc ${on ? 'on' : 'off'}`;
+  gen.disabled = !on;
+  gen.title = on ? '' : PC_OFFLINE_MSG;
+  return on;
+}
+
+/** 승인 카드의 미리듣기 음원 — 렌더용 30초 프리뷰를 공개 버킷에 미러링해 둔 것입니다.
+ *  (렌더는 비공개 jhs-archive/audio/ 를 서비스 롤로 읽고, 브라우저는 이 공개 사본만 재생합니다.) */
+function previewUrl(trackNo) {
+  return `${SUPABASE_URL}/storage/v1/object/public/jhs-public/audio-preview/track${trackNo}.mp3`;
+}
+
+/** 곡 교체 드롭다운용 전체 트랙 목록 — 로그인 후 한 번만 읽습니다. */
+let allTracks = [];
+async function loadTracks() {
+  if (allTracks.length) return allTracks;
+  const { data } = await sb.from('tracks').select('id,track_no,title_ko,title_en').order('track_no');
+  allTracks = data ?? [];
+  return allTracks;
+}
+/** 트리거 서버 호출 공통부 — 로그인 토큰으로 인증합니다. */
+async function callTrigger(job, body) {
+  const { data: { session } } = await sb.auth.getSession();
+  const base = await triggerBase();
+  const res = await fetch(`${base}/${job}`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${session?.access_token ?? ''}`, 'Content-Type': 'application/json' },
+    body: JSON.stringify(body ?? {}),
+  });
+  const j = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
+  return j;
+}
+
+/* ── 콘텐츠 10건 생성 — 기존 콘텐츠와 겹치지 않는 새 원고·이미지·영상 10건 ── */
+document.getElementById('genBtn').addEventListener('click', async () => {
+  const btn = document.getElementById('genBtn');
+  if (!confirm('콘텐츠 10건을 새로 생성합니다.\n약 30~40분 걸리며 fal 비용(약 $1~2)이 발생합니다. 진행할까요?')) return;
+  btn.disabled = true;
+  try {
+    await callTrigger('generate');
+    toast('콘텐츠 10건 생성을 시작했습니다 — 완성되는 대로 승인대기에 순서대로 나타납니다.');
+  } catch (err) {
+    toast(`생성을 시작하지 못했습니다 — ${err.message}`);
+  }
+  setTimeout(() => { btn.disabled = false; }, 5000);
+});
+
+/* ── 승인대기 / 발행현황 (같은 데이터를 한 번에 읽고 탭에 맞는 부분만 그립니다) ── */
+async function renderQueueOrTray() {
+  await loadTracks();
+  const [pendingRes, trayRes] = await Promise.all([
+    sb.from('content_queue')
+      .select('id,scheduled_date,format,status,drafts(*),assets(*),tracks(track_no,title_ko,title_en)')
+      .in('status', ['pending_review', 'failed']).order('scheduled_date'),
+    sb.from('content_queue')
+      .select('id,scheduled_date,format,status,publish_at,last_error,tracks(track_no,title_ko),publish_log(*)')
+      .in('status', ['approved', 'publishing', 'failed', 'published'])
+      .order('scheduled_date', { ascending: false }).limit(12),
+  ]);
+
+  if (pendingRes.error) { app.innerHTML = `<div class="warn">${esc(pendingRes.error.message)}</div>`; return; }
+  if (trayRes.error) { app.innerHTML = `<div class="warn">${esc(trayRes.error.message)}</div>`; return; }
+
+  const tray = trayRes.data ?? [];
+  // 발행에 실패한 건은 다시 [발행]할 수 있도록 승인대기에 함께 보여 줍니다(렌더 실패 건은 미디어가 없어 제외).
+  const rows = (pendingRes.data ?? []).filter((r) => r.status === 'pending_review' || (r.assets ?? []).length);
+
+  if (currentTab === 'tray') {
+    app.innerHTML = tray.length ? renderTray(tray) : `<div class="empty">발행 현황이 없습니다.</div>`;
+  } else {
+    app.innerHTML = rows.length ? `<div class="cards">${rows.map(renderCard).join('')}</div>`
+                                 : `<div class="empty">승인 대기 중인 콘텐츠가 없습니다.</div>`;
+    app.querySelectorAll('[data-act]').forEach((b) => b.addEventListener('click', onAct));
+    app.querySelectorAll('[data-save]').forEach((b) => b.addEventListener('click', onSave));
+    app.querySelectorAll('[data-remux]').forEach((b) => b.addEventListener('click', onRemux));
+    app.querySelectorAll('[data-track]').forEach((sel) => sel.addEventListener('change', onTrackChange));
+  }
+
+  if (currentTab === 'pending') {
+    // 승인대기 탭은 입력 중인 텍스트가 있을 수 있어 자동 갱신하지 않습니다
+    // (자동 새로고침이 수정 중인 내용을 지워버리는 문제가 있었습니다 — 탭 전환/버튼 조작 시에만 갱신).
+    stopPoll();
+  } else {
+    // 발행현황 탭은 편집 요소가 없으므로 발행 진행 중이면 짧은 주기로, 아니면 긴 주기로 갱신합니다.
+    const active = tray.some((r) => r.status === 'publishing' || r.status === 'approved');
+    startPoll(active ? 5000 : 30000);
+  }
+}
+
+/* ── 히스토리 (전체 이력 — planned 부터 rejected/failed/published 까지) ─── */
+const STATUS_META = {
+  planned: ['대기 (재생성 예정)', 'plan'], scripted: ['원고 생성됨', 'plan'], rendered: ['렌더 완료', 'plan'],
+  pending_review: ['승인 대기', 'wait'], approved: ['승인됨', 'go'], publishing: ['발행 중', 'go'],
+  published: ['발행 완료', 'done'], rejected: ['반려됨', 'rej'], failed: ['발행 실패', 'err'],
+};
+async function renderHistory() {
+  stopPoll();
+  app.innerHTML = `<div class="empty">불러오는 중…</div>`;
+  const { data, error } = await sb.from('content_queue')
+    .select('id,scheduled_date,format,status,last_error,approved_at,drafts(caption_en,reviewed_by)')
+    .order('scheduled_date', { ascending: false }).limit(200);
+
+  if (error) { app.innerHTML = `<div class="warn">${esc(error.message)}</div>`; return; }
+  const rows = data ?? [];
+
+  const line = (q) => {
+    const d = Array.isArray(q.drafts) ? q.drafts[0] : q.drafts;
+    const [label, cls] = STATUS_META[q.status] ?? [q.status, 'plan'];
+    const cap = q.status === 'rejected' || q.status === 'failed'
+      ? (q.last_error || d?.caption_en || '')
+      : (d?.caption_en || '');
+    return `<div class="hrow">
+      <span class="d">${esc(q.scheduled_date)}</span>
+      <span class="st ${cls}">${esc(label)}</span>
+      <span class="cap">${esc(q.format)} · ${esc(cap)}</span>
+      <span class="who">${esc(d?.reviewed_by ?? '')}</span>
+    </div>`;
+  };
+
+  app.innerHTML = rows.length ? `<div class="hist">${rows.map(line).join('')}</div>`
+                               : `<div class="empty">히스토리가 없습니다.</div>`;
+}
+
+/* ── 성과 (인스타·유튜브 수치) ──────────────────────────────────────────────
+   브라우저에는 인스타·유튜브 토큰이 없습니다(있으면 안 됩니다). 그래서 토큰을 쥔
+   PC 가 npm run metrics 로 수치를 모아 공개 버킷에 써 두고, 이 화면은 그 파일만
+   읽습니다 — PC 가 꺼져 있어도 마지막으로 모은 수치는 그대로 보입니다.
+   [성과 새로고침] 만 PC 를 부릅니다.                                        */
+const PUBLIC_BASE = `${SUPABASE_URL}/storage/v1/object/public/jhs-public`;
+async function readPublicJson(path, fallback) {
+  try {
+    const r = await fetch(`${PUBLIC_BASE}/${path}?t=${Date.now()}`, { cache: 'no-store' });
+    return r.ok ? await r.json() : fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+const num = (v) => (typeof v === 'number' ? v.toLocaleString('ko-KR') : '—');
+
+async function renderMetrics() {
+  stopPoll();
+  app.innerHTML = `<div class="empty">불러오는 중…</div>`;
+  const m = await readPublicJson('metrics/latest.json', null);
+
+  const head = (extra = '') => `<div class="th"><b>발행 성과</b>
+    <button id="mRefresh">성과 새로고침</button>
+    <span class="when">${extra}</span></div>`;
+
+  if (!m) {
+    app.innerHTML = `<div class="panel">${head('아직 수집 기록 없음')}
+      <div class="empty">아직 수집한 성과가 없습니다 — [성과 새로고침] 을 누르십시오.</div></div>`;
+    bindMetricRefresh();
+    return;
+  }
+
+  const ig = m.totals?.instagram ?? {};
+  const yt = m.totals?.youtube ?? {};
+  const kpis = `<div class="kpis">
+    <div class="kpi"><b>${num(ig.posts)}</b><small>인스타 게시</small></div>
+    <div class="kpi"><b>${num(ig.likes)}</b><small>인스타 좋아요</small></div>
+    <div class="kpi"><b>${num(yt.posts)}</b><small>유튜브 게시</small></div>
+    <div class="kpi"><b>${num(yt.views)}</b><small>유튜브 조회</small></div>
+  </div>`;
+
+  const notes = (m.notes ?? []).map((n) => `<div class="note">${esc(n)}</div>`).join('');
+
+  const row = (i) => {
+    const nums = i.error
+      ? `<span class="st err">${esc(i.error)}</span>`
+      : [
+          `조회 ${num(i.views)}`,
+          `♥ ${num(i.likes)}`,
+          `댓 ${num(i.comments)}`,
+        ].join(' · ');
+    const link = i.url ? `<a href="${esc(i.url)}" target="_blank" rel="noopener">열기</a>` : '';
+    return `<div class="mrow">
+      <span class="d">${esc(i.scheduled_date ?? '')}</span>
+      <span class="st ${i.platform === 'youtube' ? 'go' : 'done'}">${esc(platformLabel[i.platform] ?? i.platform)}</span>
+      <span class="cap">${esc(i.title)}</span>
+      <span class="n">${nums} ${link}</span>
+    </div>`;
+  };
+
+  app.innerHTML = `<div class="panel">${head(`수집 ${fmtKst(m.collected_at)}`)}
+    ${kpis}${notes}
+    ${(m.items ?? []).length ? (m.items).map(row).join('') : '<div class="empty">발행된 콘텐츠가 없습니다.</div>'}
+  </div>`;
+  bindMetricRefresh();
+}
+
+function bindMetricRefresh() {
+  document.getElementById('mRefresh').addEventListener('click', async (e) => {
+    const btn = e.currentTarget;
+    btn.disabled = true;
+    try {
+      await callTrigger('metrics');
+      toast('성과를 다시 모으고 있습니다 — 30초쯤 뒤에 자동으로 갱신됩니다.');
+      // 수집이 끝나야 파일이 바뀌므로 잠시 기다린 뒤 다시 읽습니다.
+      setTimeout(() => { if (currentTab === 'metrics') renderMetrics(); }, 30000);
+    } catch (err) {
+      toast(`수집을 시작하지 못했습니다 — ${err.message}`);
+      btn.disabled = false;
+    }
+  });
+}
+
+/* ── 블로그 초안 (아데오 B2B · 네이버 블로그에 붙여넣기) ─────────────────────
+   초안 생성은 PC 의 npm run blog 가 합니다. 이 화면은 결과를 읽어 보여 주고,
+   고친 본문을 네이버 스마트에디터에 붙여넣을 수 있게 복사해 줍니다.
+   본문 수정은 이 화면 안에서만 유지됩니다 — 저장 기능은 없습니다(복사용).     */
+let blogOpenId = null;
+
+async function renderBlog() {
+  stopPoll();
+  if (blogOpenId) return renderBlogDetail(blogOpenId);
+
+  app.innerHTML = `<div class="empty">불러오는 중…</div>`;
+  const idx = await readPublicJson('blog/index.json', { posts: [] });
+  const posts = idx.posts ?? [];
+
+  const row = (p) => `<button class="brow" data-post="${esc(p.id)}">
+    <span class="d">${esc(String(p.created_at ?? '').slice(5, 10))}</span>
+    <span class="t">${esc(p.title)}</span>
+    <span class="meta">${num(p.chars)}자${p.todo ? ` <span class="todo">확인 ${p.todo}</span>` : ''}</span>
+  </button>`;
+
+  app.innerHTML = `<div class="panel">
+    <div class="th"><b>블로그 초안</b><span class="when">네이버 블로그용</span></div>
+    <div class="blogform">
+      <input type="text" id="bTopic" placeholder="주제 — 예: CMS 도입 후 운영 공수가 줄어드는 지점">
+      <button id="bGo">초안 생성</button>
+    </div>
+    ${posts.length ? posts.map(row).join('') : '<div class="empty">아직 초안이 없습니다.</div>'}
+  </div>`;
+
+  document.getElementById('bGo').addEventListener('click', onBlogCreate);
+  document.getElementById('bTopic').addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') onBlogCreate();
+  });
+  app.querySelectorAll('[data-post]').forEach((b) => b.addEventListener('click', () => {
+    blogOpenId = b.dataset.post;
+    renderBlogDetail(blogOpenId);
+  }));
+}
+
+async function onBlogCreate() {
+  const input = document.getElementById('bTopic');
+  const topic = input.value.trim();
+  if (!topic) { toast('주제를 입력하십시오.'); return; }
+  const btn = document.getElementById('bGo');
+  btn.disabled = true;
+  try {
+    await callTrigger('blog', { topic });
+    toast('초안을 쓰고 있습니다 — 2~3분 뒤 목록에 나타납니다.');
+    setTimeout(() => { if (currentTab === 'blog' && !blogOpenId) renderBlog(); }, 150000);
+  } catch (err) {
+    toast(`초안 생성을 시작하지 못했습니다 — ${err.message}`);
+    btn.disabled = false;
+  }
+}
+
+async function renderBlogDetail(id) {
+  app.innerHTML = `<div class="empty">불러오는 중…</div>`;
+  const p = await readPublicJson(`blog/${id}.json`, null);
+  if (!p) {
+    app.innerHTML = `<div class="warn">초안을 읽지 못했습니다.</div>`;
+    blogOpenId = null;
+    return;
+  }
+
+  app.innerHTML = `<div class="panel">
+    <div class="th"><b>${esc(p.title)}</b><span class="when">${num(p.chars)}자 · 훅 ${esc(p.hook_pattern)}</span></div>
+    <div class="bdetail">
+      ${p.todo ? `<div class="note">발행 전에 채워야 할 수치가 ${p.todo}곳 있습니다 — 본문의 【확인필요】 를 실제 값으로 바꾸십시오.</div>` : ''}
+      <div><span class="lbl">메타 설명</span>
+        <div style="font-size:13px;color:var(--ink-2);line-height:1.7">${esc(p.meta)}</div></div>
+      <div><span class="lbl">키워드</span>
+        <div class="tags">${(p.keywords ?? []).map((k) => `<span>${esc(k)}</span>`).join('')}</div></div>
+      <div><span class="lbl">본문 (마크다운 — 고친 내용이 복사에 반영됩니다)</span>
+        <textarea id="bBody">${esc(p.body_md)}</textarea></div>
+      <div class="bacts">
+        <button id="bCopyHtml">네이버용 복사</button>
+        <button id="bCopyMd" class="ghost">마크다운 복사</button>
+        <button id="bBack" class="ghost">목록으로</button>
+      </div>
+      <div class="note">[네이버용 복사] 뒤 스마트에디터에 붙여넣으면 서식이 살아 있습니다.
+        이 화면의 수정 내용은 저장되지 않습니다 — 복사한 뒤 네이버에서 마무리하십시오.</div>
+    </div>
+  </div>`;
+
+  document.getElementById('bBack').addEventListener('click', () => { blogOpenId = null; renderBlog(); });
+  document.getElementById('bCopyMd').addEventListener('click', async () => {
+    await copyText(document.getElementById('bBody').value);
+    toast('마크다운을 복사했습니다.');
+  });
+  document.getElementById('bCopyHtml').addEventListener('click', async () => {
+    const md = document.getElementById('bBody').value;
+    await copyRich(toNaverHtml(md), md);
+    toast('네이버용으로 복사했습니다 — 스마트에디터에 붙여넣으십시오.');
+  });
+}
+
+/** 글자만 복사합니다. 사설 IP·http 로 열면 clipboard API 가 없어서 대체 경로를 씁니다. */
+async function copyText(text) {
+  try {
+    await navigator.clipboard.writeText(text);
+    return;
+  } catch { /* 아래 대체 경로 */ }
+  const ta = document.createElement('textarea');
+  ta.value = text;
+  ta.style.position = 'fixed'; ta.style.opacity = '0';
+  document.body.appendChild(ta); ta.select();
+  document.execCommand('copy');
+  ta.remove();
+}
+
+/** 서식을 살려 복사합니다 — HTML 조각을 그대로 붙여넣을 수 있게 text/html 로 넣습니다. */
+async function copyRich(html, plain) {
+  try {
+    await navigator.clipboard.write([new ClipboardItem({
+      'text/html': new Blob([html], { type: 'text/html' }),
+      'text/plain': new Blob([plain], { type: 'text/plain' }),
+    })]);
+    return;
+  } catch { /* 아래 대체 경로 — http 접속·구형 사파리 */ }
+  const div = document.createElement('div');
+  div.innerHTML = html;
+  div.setAttribute('contenteditable', 'true');
+  div.style.position = 'fixed'; div.style.left = '-9999px';
+  document.body.appendChild(div);
+  const range = document.createRange();
+  range.selectNodeContents(div);
+  const sel = window.getSelection();
+  sel.removeAllRanges(); sel.addRange(range);
+  document.execCommand('copy');
+  sel.removeAllRanges();
+  div.remove();
+}
+
+function onTab(e) {
+  currentTab = e.currentTarget.dataset.tab;
+  if (currentTab !== 'blog') blogOpenId = null;   // 다른 탭에 갔다 오면 목록부터 보여 줍니다.
+  renderApp();
+}
+
+function monthStart() { const m = new Date(); m.setDate(1); m.setHours(0, 0, 0, 0); return m.toISOString(); }
+
+/** IG media id 는 permalink 를 별도 조회해야 해서, 프로필 링크로 대신 안내합니다. */
+const IG_PROFILE_URL = 'https://instagram.com/jhsgroove';
+const platformLabel = { instagram: 'IG', youtube: 'YT' };
+function platformLink(log) {
+  if (log.result !== 'success') return `${platformLabel[log.platform] ?? log.platform} 실패`;
+  if (log.platform === 'youtube') {
+    return `<a href="https://youtu.be/${esc(log.external_id)}" target="_blank" rel="noopener">YT ▶ 확인</a>`;
+  }
+  return `<a href="${IG_PROFILE_URL}" target="_blank" rel="noopener">IG 프로필에서 확인</a>`;
+}
+
+function renderTray(tray) {
+  const line = (r) => {
+    let cls = 'go', label = '발행 준비', whenHtml = esc('업로드 시작 대기');
+    if (r.status === 'publishing') { cls = 'go'; label = '발행 중'; whenHtml = esc('플랫폼 업로드 진행'); }
+    else if (r.status === 'failed') {
+      cls = 'err'; label = '실패';
+      whenHtml = esc((r.last_error ?? '').slice(0, 40) || '로그 확인 필요');
+    } else if (r.status === 'published') {
+      cls = 'done'; label = '완료';
+      whenHtml = (r.publish_log ?? []).map(platformLink).join(' · ') || esc('업로드 완료');
+    }
+    return `<div class="trow"><span class="st ${cls}">${label}</span>
+      <b>${esc(r.format)} · #${esc(r.tracks?.track_no ?? '')} ${esc(r.tracks?.title_ko ?? '')}</b>
+      <span class="when">${whenHtml}</span></div>`;
+  };
+  const live = tray.some((r) => r.status === 'publishing');
+  return `<div class="tray"><div class="th">${live ? '<i class="live"></i>' : ''}
+    <span>발행 현황 (승인 이후 건 · 완료 포함 최근 12건)</span></div>${tray.map(line).join('')}</div>`;
+}
+
+/** yt_title 이 아직 생성되지 않은 구버전 원고를 위한 자동 대체 제목 (publish.js 의 기본값과 동일). */
+function autoYtTitle(q) {
+  return `${q.tracks?.title_en ?? q.tracks?.title_ko ?? 'JHS'} — JHS · Urban Heritage #Shorts`;
+}
+
+/**
+ * 카드의 음원 선택 블록. 곡을 바꾸면 유튜브 제목·원고의 곡명 맥락이 함께 달라지므로
+ * 저장 시 content_queue.track_id 를 갱신합니다. 영상 포맷은 이미 렌더된 mp4 안에
+ * 예전 곡이 들어 있으므로 "음원 교체 적용"(remux) 을 한 번 더 눌러야 실제로 바뀝니다.
+ */
+function musicBlock(q, hasVideo) {
+  const cur = q.tracks?.track_no;
+  const opts = allTracks.map((t) => `<option value="${t.id}" data-no="${t.track_no}"
+      ${t.track_no === cur ? 'selected' : ''}>#${String(t.track_no).padStart(2, '0')} ${esc(t.title_ko)} / ${esc(t.title_en)}</option>`).join('');
+  const remux = hasVideo
+    ? `<button class="ghost remux" data-remux>음원 교체 적용 (영상 재합성 · fal 재생성 없음)</button>
+       <span class="note">곡을 바꾼 뒤 저장하고, 이 버튼을 눌러야 영상 속 음악이 실제로 교체됩니다.</span>`
+    : `<span class="note">이미지 포맷이라 영상 음원은 없습니다 — 곡 선택은 제목·원고 맥락에만 반영됩니다.</span>`;
+  return `<div class="music"><span class="lbl">음원 (전 ${allTracks.length}곡 · 30초 프리뷰)</span>
+      <select data-track>${opts}</select>
+      <audio data-preview controls preload="none" src="${cur ? previewUrl(cur) : ''}"></audio>
+      ${remux}</div>`;
+}
+
+/**
+ * 발행 옵션 — 이 카드를 "어떤 형태로" 올릴지 고릅니다 (2026-09-23 이사님 지시).
+ *
+ * 영상: 숏폼 화질이 아직 그대로 쓸 수준이 아니라, 기본은 꺼 두고 이미지만 올립니다.
+ *       따로 편집해 올리실 때 이미지만 먼저 발행하기 위한 것입니다.
+ *       켜면 렌더된 mp4 를 그대로 올립니다. 끄면 유튜브는 올릴 것이 없어 건너뜁니다.
+ * 한국어: 업로드 본문은 영문이 기본입니다. 켜면 영문 뒤에 한국어 설명이 붙습니다.
+ */
+function optionBlock(hasVideo) {
+  const videoOpt = hasVideo ? `<label><input type="checkbox" data-with-video>
+        <span>숏폼 영상도 함께 업로드
+          <span class="sub">꺼 두면 키프레임 이미지만 인스타그램에 올라가고, 유튜브는 건너뜁니다.</span></span></label>` : '';
+  return `<div class="opts"><span class="lbl">발행 옵션</span>
+      ${videoOpt}
+      <label><input type="checkbox" data-with-ko>
+        <span>한국어 설명도 함께 업로드
+          <span class="sub">기본은 영문만입니다. 켜면 영문 본문 뒤에 위 한국어 설명이 붙습니다(제목·해시태그는 영문 유지).</span></span></label>
+    </div>`;
+}
+
+function renderCard(q) {
+  const d = Array.isArray(q.drafts) ? q.drafts[0] : q.drafts;
+  const assets = (q.assets ?? []).sort((a, b) => a.cut_no - b.cut_no);
+  const hasVideo = assets.some((a) => a.kind === 'video');
+  const media = assets.map((a) => a.kind === 'video'
+    ? `<video src="${esc(a.public_url)}" controls playsinline preload="metadata"></video>`
+    : `<img src="${esc(a.public_url)}" alt="컷 ${a.cut_no}" loading="lazy">`).join('');
+  const sb_ = (d?.storyboard ?? []).map((c) =>
+    `<div class="row"><span class="n">CUT ${c.cut}</span><span class="t"><b>${esc(c.intent)}</b><br>${esc(c.visual)}</span></div>`).join('');
+  const hit = (d?.banned_hit ?? []).length
+    ? `<div class="warn">금칙어 적중: ${esc(d.banned_hit.join(', '))} — 발행 전 반드시 수정하십시오.</div>` : '';
+
+  return `<article class="card" data-q="${q.id}" data-d="${d?.id ?? ''}" data-t0="${q.tracks ? (allTracks.find((t) => t.track_no === q.tracks.track_no)?.id ?? '') : ''}">
+    <div class="h"><span class="tag">${esc(q.format)}</span>
+      <b>#${esc(q.tracks?.track_no ?? '')} ${esc(q.tracks?.title_ko ?? '')}</b>
+      ${q.status === 'failed' ? '<span class="st fail">발행 실패 — 다시 발행 가능</span>' : ''}
+      <span class="date">${esc(q.scheduled_date)}</span></div>
+    <div class="media">${media || '<div class="empty">미디어 없음</div>'}</div>
+    <div class="body">
+      ${hit}
+      <div><span class="lbl">스토리보드</span><div class="sb">${sb_}</div></div>
+      <div><span class="lbl">유튜브 제목 — 자동 생성됨, 100자 이내 (필요 시에만 수정)</span>
+        <input type="text" data-yt-title maxlength="100" value="${esc(d?.yt_title || autoYtTitle(q))}"></div>
+      <div><span class="lbl">한국어 설명 — 기본은 업로드 제외, 아래에서 켜면 영문 뒤에 함께 올라갑니다</span>
+        <textarea data-cap-ko>${esc(d?.caption_ko ?? '')}</textarea></div>
+      <div><span class="lbl">영문 업로드 캡션 — 수정하시면 그대로 발행됩니다</span>
+        <textarea data-cap-en>${esc(d?.caption_en ?? '')}</textarea></div>
+      <div><span class="lbl">해시태그(영문, 정확히 5개 · 쉼표 또는 공백으로 구분)</span>
+        <input type="text" data-hashtags value="${esc((d?.hashtags ?? []).join(', '))}"></div>
+      ${musicBlock(q, hasVideo)}
+      ${optionBlock(hasVideo)}
+    </div>
+    <div class="savebar"><button class="ghost" data-save>수정 내용 저장 (발행 상태는 변경하지 않음)</button></div>
+    <div class="acts">
+      <button class="publish" data-act="publish">발행<small>누르는 즉시 업로드 (수동 발행)</small></button>
+      <button class="reject" data-act="reject">반려<small>히스토리에 보존</small></button>
+    </div></article>`;
+}
+
+/** "tag1, tag2 tag3" 형태를 해시태그 배열로 변환합니다(쉼표·공백 모두 구분자, # 접두는 무시). */
+function parseHashtags(raw) {
+  return raw.split(/[,\s]+/).map((t) => t.trim().replace(/^#/, '')).filter(Boolean);
+}
+
+/** 카드 안의 편집 필드를 읽고 검증합니다. 저장(onSave)과 발행(onAct) 양쪽에서 공유합니다. */
+function collectEdits(card) {
+  const hashtags = parseHashtags(card.querySelector('[data-hashtags]').value);
+  if (hashtags.length !== 5) {
+    throw new Error(`해시태그는 정확히 5개여야 합니다 (현재 ${hashtags.length}개).`);
+  }
+  const koreanTag = hashtags.find((t) => /[가-힣]/.test(t));
+  if (koreanTag) throw new Error(`해시태그에 한글이 포함되어 있습니다: ${koreanTag}`);
+  const ytTitle = card.querySelector('[data-yt-title]').value.trim();
+  if (!ytTitle) throw new Error('유튜브 제목을 입력하십시오.');
+  return {
+    caption_ko: card.querySelector('[data-cap-ko]').value.trim(),
+    caption_en: card.querySelector('[data-cap-en]').value.trim(),
+    yt_title: ytTitle,
+    hashtags,
+  };
+}
+
+/** 드롭다운에서 곡을 고르면 미리듣기 소스를 즉시 바꿔 줍니다(저장은 별도). */
+function onTrackChange(e) {
+  const sel = e.currentTarget;
+  const no = sel.selectedOptions[0]?.dataset.no;
+  const audio = sel.closest('.card').querySelector('[data-preview]');
+  if (!audio || !no) return;
+  audio.pause();
+  audio.src = previewUrl(no);
+  audio.load();
+}
+
+/** 선택된 곡을 content_queue.track_id 에 반영합니다. 바뀐 게 없으면 아무 것도 하지 않습니다. */
+async function saveTrack(card) {
+  const sel = card.querySelector('[data-track]');
+  if (!sel) return { changed: false };
+  const picked = sel.value;
+  if (!picked || picked === card.dataset.t0) return { changed: false };
+
+  const { error } = await sb.from('content_queue').update({ track_id: picked }).eq('id', card.dataset.q);
+  if (error) throw new Error(`음원 저장 실패: ${error.message}`);
+  card.dataset.t0 = picked;
+  return { changed: true };
+}
+
+/** ── 저장 (발행 상태 변경 없이 제목·본문·해시태그·음원만 반영) ─────────── */
+async function onSave(e) {
+  const btn = e.currentTarget;
+  const card = btn.closest('.card');
+  const draftId = card.dataset.d;
+  if (!draftId) { toast('저장할 원고가 없습니다.'); return; }
+
+  let edits;
+  try { edits = collectEdits(card); } catch (err) { toast(err.message); return; }
+
+  btn.disabled = true;
+  const { data: { user } } = await sb.auth.getUser();
+  const { error } = await sb.from('drafts').update({
+    ...edits, reviewed_by: user?.email ?? null, reviewed_at: new Date().toISOString(),
+  }).eq('id', draftId);
+
+  let trackMsg = '';
+  if (!error) {
+    try {
+      const { changed } = await saveTrack(card);
+      if (changed) {
+        trackMsg = card.querySelector('[data-remux]')
+          ? ' 음원이 변경되었습니다 — "음원 교체 적용"을 눌러 영상에 반영하십시오.'
+          : ' 음원도 변경되었습니다.';
+      }
+    } catch (err) { btn.disabled = false; toast(err.message); return; }
+  }
+  btn.disabled = false;
+  toast(error ? `오류: ${error.message}`
+              : `저장되었습니다 (발행 상태는 변경되지 않았습니다).${trackMsg}`);
+}
+
+/** ── 음원 교체 적용 — 로컬 트리거 서버에 remux 를 요청합니다(fal 재생성 없음). ── */
+async function onRemux(e) {
+  const btn = e.currentTarget;
+  const card = btn.closest('.card');
+  btn.disabled = true;
+  try {
+    await saveTrack(card);                      // 저장을 잊고 눌러도 선택한 곡이 반영되게 합니다.
+    await callTrigger('remux', { queueId: card.dataset.q });
+    toast('음원 교체를 시작했습니다 — 30초쯤 뒤 영상을 다시 확인하십시오.');
+  } catch (err) {
+    toast(`음원 교체를 시작하지 못했습니다 — ${err.message}`);
+  }
+  setTimeout(() => { btn.disabled = false; }, 2500);
+}
+
+/* ── 발행(수동) / 반려 ─────────────────────────────────────────────────── */
+async function onAct(e) {
+  const btn = e.currentTarget;
+  const card = btn.closest('.card');
+  const queueId = card.dataset.q, draftId = card.dataset.d;
+  const act = btn.dataset.act;
+  card.querySelectorAll('button').forEach((b) => (b.disabled = true));
+  const enable = () => card.querySelectorAll('button').forEach((b) => (b.disabled = false));
+
+  if (act === 'publish') {
+    // 화면에서 수정한 제목·본문·해시태그·음원을 먼저 저장한 뒤, 이 카드 1건만 업로드합니다.
+    // 한국어 설명은 내부 검수용이고 실제 업로드에는 영문 캡션(caption_en)만 쓰입니다.
+    let edits;
+    try { edits = collectEdits(card); } catch (err) { toast(err.message); enable(); return; }
+
+    // 카드의 발행 옵션 — 체크박스가 없는 이미지 포맷은 영상 항목 자체가 없습니다.
+    const videoBox = card.querySelector('[data-with-video]');
+    const withVideo = !!videoBox?.checked;
+    const withKorean = !!card.querySelector('[data-with-ko]')?.checked;
+    const where = videoBox && !withVideo ? '인스타그램(이미지만 · 유튜브 건너뜀)'
+      : videoBox ? '인스타그램/유튜브(영상 포함)' : '인스타그램';
+    if (!confirm(`이 콘텐츠를 지금 ${where} 에 업로드합니다.\n본문: ${withKorean ? '영문 + 한국어' : '영문만'}\n진행할까요?`)) { enable(); return; }
+
+    const { data: { user } } = await sb.auth.getUser();
+    if (draftId) {
+      await sb.from('drafts').update({
+        ...edits, reviewed_by: user?.email ?? null, reviewed_at: new Date().toISOString(),
+      }).eq('id', draftId);
+    }
+    try { await saveTrack(card); } catch (err) { toast(err.message); enable(); return; }
+
+    // 승인 상태로 전환(발행 실패 건 재시도 포함) → 트리거 서버에 이 1건만 발행 요청
+    const { error } = await sb.from('content_queue')
+      .update({ status: 'approved', approved_at: new Date().toISOString(), last_error: null })
+      .eq('id', queueId).in('status', ['pending_review', 'failed']);
+    if (error) { toast(`오류: ${error.message}`); enable(); return; }
+    try {
+      await callTrigger('publish', { queueId, withVideo, withKorean });
+      toast('업로드를 시작했습니다 — 발행현황 탭에서 진행 상황을 확인하십시오.');
+    } catch (err) {
+      // 트리거 호출에 실패하면 승인 상태를 되돌려 카드가 승인대기에 남게 합니다.
+      await sb.from('content_queue').update({ status: 'pending_review' }).eq('id', queueId).eq('status', 'approved');
+      toast(`업로드를 시작하지 못했습니다 — ${err.message}`);
+      refreshPcState();
+      enable(); return;
+    }
+  } else {
+    const { data: { user } } = await sb.auth.getUser();
+    if (draftId) {
+      await sb.from('drafts').update({
+        reviewed_by: user?.email ?? null, reviewed_at: new Date().toISOString(),
+      }).eq('id', draftId);
+    }
+    const { error } = await sb.from('content_queue')
+      .update({ status: 'rejected', last_error: '사람이 반려함' })
+      .eq('id', queueId).eq('status', 'pending_review');
+    toast(error ? `오류: ${error.message}` : '반려되었습니다 — 히스토리에 보존됩니다.');
+  }
+  setTimeout(renderApp, 800);
+}
+
+/* ── 폴링 ───────────────────────────────────────────────────────────────── */
+let timer = null;
+function startPoll(ms) { stopPoll(); timer = setInterval(renderQueueOrTray, ms); }
+function stopPoll() { if (timer) { clearInterval(timer); timer = null; } }
+document.addEventListener('visibilitychange', () => {
+  if (document.hidden) stopPoll();
+  // 승인대기·블로그 탭은 편집 중인 내용을 지울 수 있어 자동 갱신하지 않습니다.
+  else if (currentTab === 'tray' || currentTab === 'history' || currentTab === 'metrics') renderApp();
+});
+
+/* ── 부트 ───────────────────────────────────────────────────────────────── */
+document.getElementById('out').addEventListener('click', async () => { await sb.auth.signOut(); renderLogin(); });
+sb.auth.onAuthStateChange((_e, s) => (s ? renderApp() : renderLogin()));
+const { data: { session } } = await sb.auth.getSession();
+session ? renderApp() : renderLogin();
+</script>
+</body>
+</html>
