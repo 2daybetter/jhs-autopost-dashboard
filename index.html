@@ -27,7 +27,7 @@ body{margin:0;background:var(--paper);color:var(--ink);
 header{position:sticky;top:0;z-index:10;background:var(--paper);border-bottom:1px solid var(--line);
   padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;row-gap:8px}
 header b{font-size:15px;letter-spacing:-.02em;white-space:nowrap}
-/* PC(발행·생성 서버) 연결 표시 — 웹 주소로 열었을 때만 보입니다 */
+/* 실행 위치 표시 — 발행·생성은 클라우드(GitHub Actions)에서 돕니다 */
 .pc{font:11px/1.5 ui-monospace,monospace;padding:3px 8px;white-space:nowrap;border:1px solid currentColor}
 .pc.on{color:var(--ok)} .pc.off{color:var(--amber)}
 header .sp{margin-left:auto;font:12px/1.4 ui-monospace,monospace;color:var(--ink-3);font-variant-numeric:tabular-nums}
@@ -278,7 +278,7 @@ function renderApp() {
   document.getElementById('tabsNav').hidden = false;
   updateTabsNav();
   refreshSpend();
-  refreshPcState();   // 웹에서 열었을 때 PC 가 켜져 있는지 표시합니다.
+  refreshPcState();   // 실행 위치(클라우드)를 표시합니다.
   if (currentTab === 'history') return renderHistory();
   if (currentTab === 'metrics') return renderMetrics();
   if (currentTab === 'blog') return renderBlog();
@@ -292,43 +292,19 @@ async function refreshSpend() {
     `당월 $${usd.toFixed(2)} · 약 ${Math.round(usd * 1390).toLocaleString('ko-KR')}원`;
 }
 
-/* ── 발행·생성을 실행할 PC 를 찾습니다 ─────────────────────────────────────
-   이 페이지는 두 곳에서 열립니다.
-     · 집/사무실 안 (localhost·192.168.x) — 바로 옆 포트 4322 를 부릅니다.
-     · 웹 주소 (Vercel) — PC 는 인터넷 반대편에 있으므로 터널 주소가 필요합니다.
-   터널 주소는 껐다 켤 때마다 바뀌어서 페이지에 적어 둘 수 없습니다. 대신 PC 가
-   켜질 때 현재 주소를 공개 버킷의 config/trigger.json 에 써 두고(scripts/run-tunnel.mjs),
-   이 페이지가 누를 때마다 그 파일을 읽어 현재 주소를 따라갑니다.
-   파일이 없으면 = PC 가 꺼져 있음 → 발행·생성만 잠그고 열람·승인은 그대로 됩니다. */
-const PRIVATE_HOST = /^(localhost|127\.|\[?::1\]?$|192\.168\.|10\.|172\.(1[6-9]|2\d|3[01])\.)/;
-const IS_LOCAL = PRIVATE_HOST.test(location.hostname);
-const TRIGGER_CONFIG_URL = `${SUPABASE_URL}/storage/v1/object/public/jhs-public/config/trigger.json`;
-const PC_OFFLINE_MSG = 'PC 가 꺼져 있어 발행·생성을 할 수 없습니다 — PC 를 켠 뒤 다시 시도하십시오.';
+/* ── 발행·생성은 클라우드에서 실행합니다 (2026-10-07) ─────────────────────────
+   버튼 → Supabase Edge Function autopost-trigger (로그인 검증) → GitHub Actions
+   (2daybetter/jhs-autopost · job.yml). PC 가 꺼져 있어도 됩니다.
+   예전 경로(PC 트리거 서버 4322 + cloudflared 터널)는 PC 가 꺼지면 막혔습니다. */
+const TRIGGER_URL = `${SUPABASE_URL}/functions/v1/autopost-trigger`;
 
-/** 지금 호출할 트리거 서버 주소. 웹에서 열었으면 PC 의 현재 터널 주소를 찾아옵니다. */
-async function triggerBase() {
-  if (IS_LOCAL) return `${location.protocol}//${location.hostname}:4322/api`;
-  // 주소가 바뀌어도 따라가야 하므로 캐시를 쓰지 않고 매번 읽습니다.
-  const res = await fetch(`${TRIGGER_CONFIG_URL}?t=${Date.now()}`, { cache: 'no-store' });
-  if (!res.ok) throw new Error(PC_OFFLINE_MSG);
-  const { url } = await res.json().catch(() => ({}));
-  if (!url) throw new Error(PC_OFFLINE_MSG);
-  return `${url}/api`;
-}
-
-/** 머리말의 PC 연결 표시를 갱신하고, 꺼져 있으면 생성 버튼을 잠급니다. */
+/** 머리말 표시 — 실행 위치가 클라우드임을 알립니다. */
 async function refreshPcState() {
   const el = document.getElementById('pc');
-  const gen = document.getElementById('genBtn');
-  if (IS_LOCAL) { el.hidden = true; return true; }
-  let on = false;
-  try { await triggerBase(); on = true; } catch { on = false; }
   el.hidden = false;
-  el.textContent = on ? 'PC 연결됨' : 'PC 꺼짐 · 열람/승인만';
-  el.className = `pc ${on ? 'on' : 'off'}`;
-  gen.disabled = !on;
-  gen.title = on ? '' : PC_OFFLINE_MSG;
-  return on;
+  el.textContent = '클라우드 실행';
+  el.className = 'pc on';
+  return true;
 }
 
 /** 승인 카드의 미리듣기 음원 — 렌더용 30초 프리뷰를 공개 버킷에 미러링해 둔 것입니다.
@@ -345,14 +321,17 @@ async function loadTracks() {
   allTracks = data ?? [];
   return allTracks;
 }
-/** 트리거 서버 호출 공통부 — 로그인 토큰으로 인증합니다. */
+/** 클라우드 실행 요청 공통부 — 로그인 토큰으로 인증합니다. */
 async function callTrigger(job, body) {
   const { data: { session } } = await sb.auth.getSession();
-  const base = await triggerBase();
-  const res = await fetch(`${base}/${job}`, {
+  const res = await fetch(TRIGGER_URL, {
     method: 'POST',
-    headers: { Authorization: `Bearer ${session?.access_token ?? ''}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify(body ?? {}),
+    headers: {
+      Authorization: `Bearer ${session?.access_token ?? ''}`,
+      apikey: SUPABASE_ANON_KEY,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ ...(body ?? {}), job }),
   });
   const j = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(j.error || `HTTP ${res.status}`);
@@ -451,9 +430,9 @@ async function renderHistory() {
 
 /* ── 성과 (인스타·유튜브 수치) ──────────────────────────────────────────────
    브라우저에는 인스타·유튜브 토큰이 없습니다(있으면 안 됩니다). 그래서 토큰을 쥔
-   PC 가 npm run metrics 로 수치를 모아 공개 버킷에 써 두고, 이 화면은 그 파일만
-   읽습니다 — PC 가 꺼져 있어도 마지막으로 모은 수치는 그대로 보입니다.
-   [성과 새로고침] 만 PC 를 부릅니다.                                        */
+   클라우드의 npm run metrics 가 수치를 모아 공개 버킷에 써 두고, 이 화면은 그 파일만
+   읽습니다 — 수집이 돌지 않아도 마지막으로 모은 수치는 그대로 보입니다.
+   [성과 새로고침] 이 클라우드 수집을 부릅니다.                                       */
 const PUBLIC_BASE = `${SUPABASE_URL}/storage/v1/object/public/jhs-public`;
 async function readPublicJson(path, fallback) {
   try {
@@ -534,7 +513,7 @@ function bindMetricRefresh() {
 }
 
 /* ── 블로그 초안 (아데오 B2B · 네이버 블로그에 붙여넣기) ─────────────────────
-   초안 생성은 PC 의 npm run blog 가 합니다. 이 화면은 결과를 읽어 보여 주고,
+   초안 생성은 클라우드의 npm run blog 가 합니다. 이 화면은 결과를 읽어 보여 주고,
    고친 본문을 네이버 스마트에디터에 붙여넣을 수 있게 복사해 줍니다.
    본문 수정은 이 화면 안에서만 유지됩니다 — 저장 기능은 없습니다(복사용).     */
 let blogOpenId = null;
